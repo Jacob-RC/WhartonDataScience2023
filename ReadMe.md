@@ -1,0 +1,1 @@
+Use raw data for the raw spreadsheets that we gather, and cleaned data for as we go through and consolidate the data.
