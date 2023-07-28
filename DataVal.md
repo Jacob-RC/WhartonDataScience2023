@@ -20,3 +20,5 @@ For "Raw Public School Data" ignore it.
 For "Raw Race Breakdown", include all of the colums
 <br>
 For "Raw Violent Crimes", take the amount of violent crimes per county
+<br>
+For "Raw Children single parent, we just want "total est" as a percentage
