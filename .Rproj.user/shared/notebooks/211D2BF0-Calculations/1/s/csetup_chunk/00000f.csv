@@ -1,5 +1,0 @@
-"0","knitr::opts_chunk$set(echo = TRUE)"
-"0","if (!require(""pacman"")) install.packages(""pacman"")"
-"2","Loading required package: pacman
-"
-"0","pacman::p_load(ISLR, rpart, rattle, pROC, partykit, ggplot2, glmnet, leaps, dplyr, imager, ranger, tidyverse, tm)"
