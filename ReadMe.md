@@ -1,4 +1,9 @@
-Use raw data for the raw spreadsheets that we gather, and cleaned data for as we go through and consolidate the data.
+This repository contains all the information used during Wharton Data Science 2023 summer program. Included is all the raw data, their respective sources and any other files used during the presentation. <br>
+
+If you have questions, please contact at chenjacob@outlook.com
+
+
+
 
 Sources:
 Total County Population: https://www.census.gov/data/tables/time-series/demo/popest/2020s-counties-total.html <br>
