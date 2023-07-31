@@ -1,0 +1,109 @@
+---
+title: "Homework, Day 11 - Text Mining"
+author:
+- Group Member 1
+- Group Member 2
+- Group Member 3
+- Group Member 4
+- Group Member 5
+date: 'Due: Third Monday of Instruction at 5:30pm'
+output:
+  pdf_document:
+    toc: yes
+    toc_depth: '4'
+  html_document:
+    code_folding: show
+    highlight: haddock
+    theme: lumen
+    toc: yes
+    toc_depth: 4
+    toc_float: yes
+  word_document:
+    toc: yes
+    toc_depth: '4'
+urlcolor: blue  
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(fig.height=4, fig.width=6, warning = F)
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(randomForest, tree, ISLR, rpart, rattle, pROC, partykit, ggplot2, glmnet, leaps, dplyr, keras, neuralnet, imager, ranger, tidyverse, RColorBrewer, wordcloud, tm)
+```
+
+# Data Being Used: Yelp challenge 2019
+
+## Goal of the study
+
+The goals are to try to identify important words associated with positive ratings and negative ratings. Collectively we have a sentiment analysis.  
+
+## 1. JSON data and preprocessing data
+
+i. Load *json* data
+
+The *json* data provided is formatted as newline delimited JSON (ndjson). It is relatively new and useful for streaming.
+
+We use `stream_in()` in the `jsonlite` package to load the JSON data (of ndjson format) as `data.frame`. (For the traditional JSON file, use `fromJSON()` function.)
+
+```{r}
+pacman::p_load(jsonlite)
+yelp_data <- jsonlite::stream_in(file("data/yelp_review_20k.json"), verbose = F)
+str(yelp_data)
+```
+
+
+**Write a brief summary about the data:**
+
+a) Which time period were the reviews collected in this data?
+
+
+b) Are ratings (with 5 levels) related to month of the year? Only address this through EDA please. 
+
+
+ii. Document term matrix (dtm)
+ 
+Extract document term matrix for texts to keep words appearing at least .5% of the time among all 20000 documents. Go through the similar process of cleansing as we did in the lecture.
+(Us tm_map() and removeSparseTerms()) 
+
+
+a) Briefly explain what does this matrix record? What is the cell number at row 100 and column 5? What does it represent?
+
+
+b) What is the sparsity of the dtm obtained here? What does that mean?
+
+
+iii. Set the stars as a two category response variable called rating to be “1” = 5,4 and “0”= 1,2,3. Combine the variable rating with the dtm as a data frame called data2. 
+
+
+## 2. LASSO
+Get a training data with 13000 reviews and the 5000 reserved as the testing data. Keep the rest (2000) as our validation data set. 
+
+
+### i. Use the training data to get Lasso fit. Choose lambda.1se. Keep the result here.
+
+
+### ii. Feed the output from Lasso above, get a logistic regression. 
+	
+a) Pull out all the positive coefficients and the corresponding words. Rank the coefficients in a decreasing order. Report the leading 2 words and the coefficients. Describe briefly the interpretation for those two coefficients. 
+
+
+b) Make a word cloud with the top 100 positive words according to their coefficients. Interpret the cloud briefly.
+
+
+c) Repeat for the bag of negative words.
+
+
+d) Summarize the findings. 
+
+### iii Compare testing error
+
+a) From Lasso fit in i)
+
+
+b) From logistic regression in ii)
+
+
+c) Which one is smaller?
+
+
+
+
