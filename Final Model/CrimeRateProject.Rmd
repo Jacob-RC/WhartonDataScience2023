@@ -1,0 +1,486 @@
+---
+title: "Investigating Violent Crimes: a Human Issue"
+output:
+  html_document:
+    code_folding: show
+    highlight: haddock
+    number_sections: yes
+    theme: lumen
+    toc: yes
+    toc_depth: 2
+    toc_float: yes
+  date: "2023-07-31"
+name: "RMD: Max Liu, Website design: Jacob Chen, Python model: Leo Liu, PPT: Nicholas Tran, Eric Yu"
+---
+
+```{r warning=FALSE}
+library(ggplot2)
+library(glmnet)
+crime <- read.csv("crime_re1.csv")
+crime$Violent.crime <- as.numeric(crime$Violent.crime)
+crime <- na.omit(crime)
+crime$Violent.crime <- (100000*crime$Violent.crime/crime$POPESTIMATE) #adjust crime quantity by population into crime per 100,000 people
+# summary(crime)
+# names(crime)
+```
+
+# Abstract
+
+  Violent crimes are a deeply human issue influencing millions of Americans daily. Many factors intertwine to create a butterfly effect that ripples across racial, economic, and social boundaries and contribute to the staggering crime rates. This study collects data for some factors that plausibly affect violent crime rate and attempts to share insight into what factors significantly influence violent crimes. Through Least Absolute Shrinkage and Selection Operator (LASSO) to filter significant variables, as well as using backward selection to further eliminate insignificant factors, we are able to present three models that began with different inclusion of variables. In using testing data to calculate the error of each model, the final LASSO model shows that percentage of people owning house, black/African American and mixed race population rate appears to have positive correlation with violent crime rates, though causation cannot be proven with statistical tools. Meanwhile, percentage of people with college plus degree and high speed Internet access seems to decrease violent crime rates, still without evidence of causation.
+
+
+
+
+# Purpose of the Study
+
+  In the past decades, policy makers and ordinary citizens have debated over the cause of crimes. However, many of the discussions served a dual purpose of attacking opposite political party. With the data and analysis of this research, one purpose of our study is to eliminate any party's prejudice and statistically show significant factors that influence the violent crime rate in America. 
+
+  Considering the future of children, families and millions of ordinary Americans, such data and research is necessary to provide actual progress towards understanding how to create a more safe and inclusive environment for any American. 
+
+  This work also attempts to inform policy makers of possible factors influencing violent crime rates, although the limitation of the scale of this research might not be sufficient to influence institutional decision making. In this account, another significant purpose of this study is also to enlighten or inspire more statisticians to dive into similar investigations, whether through collecting data or analyzing on a grander scale. 
+
+
+# Information about the Data
+Our data is sourced by county for the 50 states of America not including territories. We combined 60 data sets in order to create our master file. Data mainly came from official US government pages such as the Census Bureau, FBI, or independent sources like the Pew Research Center. Since all the desired data is hard to obtain for the same year, we gathered data from different years to form our data. 
+
+In meeting NA values, we directly omit them since rows with NA values consists of around 13% of the data, which is not that significant. This is a reasonable approach considering difficulties in tracking down individual county's data within limited time.
+
+
+```{r table2, echo=FALSE, message=FALSE, warnings=FALSE, results='asis'}
+tabl <- "
+| Data                 | Year |
+|---------------       |------|
+| Violent Crime        | 2016 |
+| Population           | 2020 |
+| Police Force Numbers | 2022 |
+| Race Breakdown       | 2016 |
+| Party Affiliation    | 2014 |
+| Internet Access      | 2013 |
+| Annual Income        | 2022 |
+| Age Range            | 2020 |
+"
+cat(tabl) # output the table in a format good for HTML/PDF/docx conversion
+```
+
+The sources of data are listed here as well as the github link for all the files.
+
+[Kaggle](https://www.kaggle.com/datasets/leoliu1415/number-of-violent-crimes-by-county)
+
+[Github folder](https://github.com/Jacob-RC/WhartonDataScience2023)
+
+[Violent Crime](https://ucr.fbi.gov/crime-in-the-u.s/2016/crime-in-the-u.s.-2016/tables/table-8/table-8.xls/view)
+
+[Population](https://www.census.gov/data/tables/time-series/demo/popest/2020s-counties-total.html)
+
+[Police Force Numbers](https://cde.ucr.cjis.gov/LATEST/webapp/#/pages/downloads)
+
+[Race Breakdown](https://www.kaggle.com/datasets/mikejohnsonjr/us-counties-diversity-index )
+
+[Party Affiliation](https://www.pewresearch.org/religion/religious-landscape-study/compare/party-affiliation/by/state/)
+
+[Internet Access](https://www.fcc.gov/form-477-county-data-internet-access-services)
+
+[Annual Income](https://apps.bea.gov/regional/downloadzip.cfm)
+
+[Age Range]( https://www.census.gov/data/tables/time-series/demo/popest/2020s-counties-detail.html)
+
+# Exploratory Data Analysis
+
+```{r EDA}
+# #Violent crime with politic parties
+# ggplot(crime, aes(x=Republican,y=Violent.crime)) +
+#     geom_point() +
+#     geom_smooth(method=lm, se=FALSE)
+# 
+# ggplot(crime, aes(x=Democrat,y=Violent.crime)) +
+#     geom_point() +
+#     geom_smooth(method=lm, se=FALSE)
+
+
+#Violent crime with income, poverty
+ggplot(crime, aes(x=PovertyAllAgesPct,y=Violent.crime)) +
+    geom_point() +
+    geom_smooth(method=lm, se=FALSE)
+
+ggplot(crime, aes(x=PerCapitaInc,y=Violent.crime)) +
+    geom_point() +
+    geom_smooth(method=lm, se=FALSE)
+
+#Violent with Education
+ggplot(crime, aes(x=Ed1LessThanHSPct,y=Violent.crime)) +
+    geom_point() +
+    geom_smooth(method=lm, se=FALSE)
+
+ggplot(crime, aes(x=Ed3SomeCollegePct,y=Violent.crime)) +
+    geom_point() +
+    geom_smooth(method=lm, se=FALSE)
+
+ggplot(crime, aes(x=Ed5CollegePlusPct,y=Violent.crime)) +
+    geom_point() +
+    geom_smooth(method=lm, se=FALSE)
+
+
+#Violent with police officers
+ggplot(crime, aes(x=male_officer+female_officer,y=Violent.crime)) +
+    geom_point() +
+    geom_smooth(method=lm, se=FALSE)
+
+# ggplot(crime, aes(x=Asian.alone..percent..2013,y=Violent.crime)) +
+#     geom_point() +
+#     geom_smooth(method=lm, se=FALSE)
+# 
+# #
+# ggplot(crime, aes(x=Black.or.African.American.alone..percent..2013,y=Violent.crime)) +
+#     geom_point() +
+#     geom_smooth(method=lm, se=FALSE)
+# #
+# ggplot(crime, aes(x=American.Indian.and.Alaska.Native.alone..percent..2013,y=Violent.crime)) +
+#     geom_point() +
+#     geom_smooth(method=lm, se=FALSE)
+```
+
+```{r race}
+fit_race <- lm(Violent.crime~Black.or.African.American.alone..percent..2013+
+                 American.Indian.and.Alaska.Native.alone..percent..2013+
+                 Asian.alone..percent..2013+
+                 Native.Hawaiian.and.Other.Pacific.Islander.alone..percent.+
+                 Two.or.More.Races..percent..2013+
+                 Hispanic.or.Latino..percent..2013+
+                 White.alone..not.Hispanic.or.Latino..percent..2013,data=crime)
+summary(fit_race)
+```
+
+```{r age}
+fit_age <- lm(Violent.crime~AGE04_TOT+AGE59_TOT+AGE1014_TOT+AGE1519_TOT+AGE2024_TOT+
+              AGE2529_TOT+AGE3034_TOT+AGE3539_TOT+AGE4044_TOT+
+              AGE4549_TOT+AGE5054_TOT+AGE5559_TOT+AGE6064_TOT+
+              AGE6569_TOT+AGE7074_TOT+AGE7579_TOT+AGE8084_TOT+AGE85PLUS_TOT
+                ,data=crime)
+summary(fit_age)
+
+fit_male <- lm(Violent.crime~AGE04_MALE+AGE59_MALE+AGE1014_MALE+AGE1519_MALE+AGE2024_MALE+
+              AGE2529_MALE+AGE3034_MALE+AGE3539_MALE+AGE4044_MALE+
+              AGE4549_MALE+AGE5054_MALE+AGE5559_MALE+AGE6064_MALE+
+              AGE6569_MALE+AGE7074_MALE+AGE7579_MALE+AGE8084_MALE+AGE85PLUS_MALE
+                ,data=crime)
+summary(fit_male)
+
+fit_fem <- lm(Violent.crime~AGE04_FEM+AGE59_FEM+AGE1014_FEM+AGE1519_FEM+AGE2024_FEM+
+              AGE2529_FEM+AGE3034_FEM+AGE3539_FEM+AGE4044_FEM+
+              AGE4549_FEM+AGE5054_FEM+AGE5559_FEM+AGE6064_FEM+
+              AGE6569_FEM+AGE7074_FEM+AGE7579_FEM+AGE8084_FEM+AGE85PLUS_FEM
+                ,data=crime)
+summary(fit_fem)
+```
+
+```{r education}
+fit_edu <- lm(Violent.crime~Ed1LessThanHSPct+Ed3SomeCollegePct+Ed5CollegePlusPct
+                ,data=crime)
+summary(fit_edu)
+```
+
+```{r police+income}
+fit_police <- lm(Violent.crime~male_officer+female_officer
+                ,data=crime)
+summary(fit_police)
+
+fit_income <- lm(Violent.crime~OwnHomePct+NumUnemployed2019+Housing_Units+PerCapitaInc
+                ,data=crime)
+summary(fit_income)
+```
+
+# Analysis with LASSO
+
+## LASSO Everything
+```{r LASSO}
+set.seed(527)
+# Separate testing data with training data with 80% being training
+sample <- sample(c(TRUE,FALSE),nrow(crime),replace=TRUE,prob=c(0.8,0.2))
+crime1 <- crime[sample,]
+test <- crime[!sample,]
+crime <- crime1
+
+y_lasso <- crime$Violent.crime # extract Y
+x_lasso <- model.matrix(Violent.crime~., data=crime)[, -1]
+fit_lasso <- cv.glmnet(x = x_lasso,y=y_lasso,data=crime,alpha=1,nfolds = 10)
+plot(fit_lasso)
+fit_lasso$lambda.min
+
+fit_lasso_model <- glmnet(x = x_lasso,y=y_lasso,data=crime,alpha=1,lambda=2.016)
+sig_var <- coef(fit_lasso_model)
+as.data.frame(sig_var[which(sig_var !=0),])
+```
+The remaining variables are the ones that are significant after applying LASSO.
+
+```{r LASSO_relaxed}
+# seed was set but still outputs random result.... But key point is just taking non zero coefficient variables. The variables used here was from one random output lambda that we couldn't recreate.
+fit_lm <- lm(Violent.crime~AGE85PLUS_FEM+Ed3SomeCollegePct+
+               Ed5CollegePlusPct+OwnHomePct+NumUnemployed2019+Tier_2+Tier_3+Tier_4+
+               Democrat+Black.or.African.American.alone..percent..2013+
+               Black.or.African.American.alone..percent..2013+
+               Native.Hawaiian.and.Other.Pacific.Islander.alone..percent.+
+               Two.or.More.Races..percent..2013+
+               White.alone..not.Hispanic.or.Latino..percent..2013
+               ,data=crime)
+summary(fit_lm)
+```
+From the results of relaxed LASSO, not all variable have low enough p-value to be significant, therefore backward selection is applied to further deduct dimension and leave more significant variables. The first variable to be eliminated is AGE85PLUS_FEM.
+
+```{r LASSO_relaxed_backward_1}
+fit_lm_back1 <- lm(Violent.crime~Ed3SomeCollegePct+
+               Ed5CollegePlusPct+OwnHomePct+NumUnemployed2019+Tier_2+Tier_3+Tier_4+
+               Democrat+Black.or.African.American.alone..percent..2013+
+               Black.or.African.American.alone..percent..2013+
+               Native.Hawaiian.and.Other.Pacific.Islander.alone..percent.+
+               Two.or.More.Races..percent..2013+
+               White.alone..not.Hispanic.or.Latino..percent..2013
+               ,data=crime)
+summary(fit_lm_back1)
+```
+The next variable with highest p-value is Tier_2 Internet Access and it is removed as well.
+
+```{r LASSO_relaxed_backward_2}
+fit_lm_back2 <- lm(Violent.crime~Ed3SomeCollegePct+
+               Ed5CollegePlusPct+OwnHomePct+NumUnemployed2019+Tier_3+Tier_4+
+               Democrat+Black.or.African.American.alone..percent..2013+
+               Black.or.African.American.alone..percent..2013+
+               Native.Hawaiian.and.Other.Pacific.Islander.alone..percent.+
+               Two.or.More.Races..percent..2013+
+               White.alone..not.Hispanic.or.Latino..percent..2013
+               ,data=crime)
+summary(fit_lm_back2)
+```
+Next insignificant variable is NumUnemployed2019.
+```{r LASSO_relaxed_backward_3}
+fit_lm_back3 <- lm(Violent.crime~Ed3SomeCollegePct+
+               Ed5CollegePlusPct+OwnHomePct+Tier_3+Tier_4+
+               Democrat+Black.or.African.American.alone..percent..2013+
+               Black.or.African.American.alone..percent..2013+
+               Native.Hawaiian.and.Other.Pacific.Islander.alone..percent.+
+               Two.or.More.Races..percent..2013+
+               White.alone..not.Hispanic.or.Latino..percent..2013
+               ,data=crime)
+summary(fit_lm_back3)
+```
+```{r LASSO_relaxed_backward_4}
+fit_lm_back4 <- lm(Violent.crime~Ed3SomeCollegePct+
+               Ed5CollegePlusPct+OwnHomePct+Tier_3+Tier_4+
+               Democrat+Black.or.African.American.alone..percent..2013+
+               Black.or.African.American.alone..percent..2013+
+               Native.Hawaiian.and.Other.Pacific.Islander.alone..percent.+
+               Two.or.More.Races..percent..2013
+               ,data=crime)
+summary(fit_lm_back4)
+```
+
+```{r LASSO_relaxed_backward_5}
+fit_lm_back5 <- lm(Violent.crime~
+               Ed5CollegePlusPct+OwnHomePct+Tier_3+Tier_4+
+               Democrat+Black.or.African.American.alone..percent..2013+
+               Black.or.African.American.alone..percent..2013+
+               Native.Hawaiian.and.Other.Pacific.Islander.alone..percent.+
+               Two.or.More.Races..percent..2013
+               ,data=crime)
+summary(fit_lm_back5)
+```
+
+```{r LASSO_relaxed_backward_6}
+fit_lm_back6 <- lm(Violent.crime~
+               Ed5CollegePlusPct+OwnHomePct+Tier_3+Tier_4+
+               Democrat+Black.or.African.American.alone..percent..2013+
+               Black.or.African.American.alone..percent..2013+
+               Two.or.More.Races..percent..2013
+               ,data=crime)
+summary(fit_lm_back6)
+```
+
+```{r LASSO_relaxed_backward_7}
+fit_lm_back7 <- lm(Violent.crime~
+               Ed5CollegePlusPct+OwnHomePct+Tier_4+
+               Democrat+Black.or.African.American.alone..percent..2013+
+               Black.or.African.American.alone..percent..2013+
+               Two.or.More.Races..percent..2013
+               ,data=crime)
+summary(fit_lm_back7)
+```
+
+
+```{r Assumption testing}
+plot(fit_lm_back7)
+```
+
+The residual graph resembles a horizontal line at zero, meaning our assumption of normality is met since residual center around zero on average. The Q-Q graph matches the theoretical slanted line and also shows our data conforms with normality.
+
+The standardized residuals shows the homoscedasticity assumption is met. And finally. the residual leverage graph shows the linearity assumption is met.
+
+## LASSO without Internet
+```{r LASSO_without_Internet}
+set.seed(527)
+x_lasso_no_int <- model.matrix(Violent.crime~.-Tier_1-Tier_2-Tier_3-Tier_4, data=crime)[, -1]
+fit_lasso_2 <- cv.glmnet(x = x_lasso_no_int,y=y_lasso,data=crime,alpha=1,nfolds = 10)
+plot(fit_lasso_2)
+#fit_lasso_2$lambda.min=3.66
+
+fit_lasso_model_2 <- glmnet(x = x_lasso_no_int,y=y_lasso,data=crime,alpha=1,lambda=3.66)
+sig_var_2 <- coef(fit_lasso_model_2)
+as.data.frame(sig_var_2[which(sig_var_2 !=0),])
+```
+
+```{r Lasso_without_Int_relaxed}
+fit_lm_2 <- lm(Violent.crime~AGE1824_MALE+MEDIAN_AGE_MALE+Ed3SomeCollegePct+
+               Ed5CollegePlusPct+OwnHomePct+Democrat+Black.or.African.American.alone..percent..2013+
+               Native.Hawaiian.and.Other.Pacific.Islander.alone..percent.+
+               Two.or.More.Races..percent..2013+White.alone..not.Hispanic.or.Latino..percent..2013
+               ,data=crime)
+summary(fit_lm_2)
+```
+
+```{r Lasso_without_Int_relaxed_back1}
+fit_lm_2_back1 <- lm(Violent.crime~AGE1824_MALE+Ed3SomeCollegePct+
+               Ed5CollegePlusPct+OwnHomePct+Democrat+Black.or.African.American.alone..percent..2013+
+               Native.Hawaiian.and.Other.Pacific.Islander.alone..percent.+
+               Two.or.More.Races..percent..2013+White.alone..not.Hispanic.or.Latino..percent..2013
+               ,data=crime)
+summary(fit_lm_2_back1)
+```
+
+```{r Lasso_without_Int_relaxed_back2}
+fit_lm_2_back2 <- lm(Violent.crime~AGE1824_MALE+Ed3SomeCollegePct+
+               Ed5CollegePlusPct+OwnHomePct+Democrat+Black.or.African.American.alone..percent..2013+
+               Native.Hawaiian.and.Other.Pacific.Islander.alone..percent.+
+               Two.or.More.Races..percent..2013
+               ,data=crime)
+summary(fit_lm_2_back2)
+```
+
+```{r Lasso_without_Int_relaxed_back3}
+fit_lm_2_back3 <- lm(Violent.crime~Ed3SomeCollegePct+
+               Ed5CollegePlusPct+OwnHomePct+Democrat+Black.or.African.American.alone..percent..2013+
+               Native.Hawaiian.and.Other.Pacific.Islander.alone..percent.+
+               Two.or.More.Races..percent..2013
+               ,data=crime)
+summary(fit_lm_2_back3)
+```
+
+```{r Lasso_without_Int_relaxed_back4}
+fit_lm_2_back4 <- lm(Violent.crime~
+               Ed5CollegePlusPct+OwnHomePct+Democrat+Black.or.African.American.alone..percent..2013+
+               Native.Hawaiian.and.Other.Pacific.Islander.alone..percent.+
+               Two.or.More.Races..percent..2013
+               ,data=crime)
+summary(fit_lm_2_back4)
+```
+```{r Lasso_without_Int_relaxed_back5}
+fit_lm_2_back5 <- lm(Violent.crime~
+               Ed5CollegePlusPct+OwnHomePct+Democrat+Black.or.African.American.alone..percent..2013+
+               Two.or.More.Races..percent..2013
+               ,data=crime)
+summary(fit_lm_2_back5)
+```
+
+```{r Assumption Validation 2}
+plot(fit_lm_2_back5)
+```
+
+
+The assumptions of normality, homoscedasticity and linearity are all met here as well, which is not surprising considering the training data is exactly the same as the previous model.
+
+
+## LASSO without political affiliation
+```{r LASSO_without_gov}
+set.seed(527)
+x_lasso_no_gov <- model.matrix(Violent.crime~.-Democrat-Republican, data=crime)[, -1]
+fit_lasso_3 <- cv.glmnet(x = x_lasso_no_gov,y=y_lasso,data=crime,alpha=1,nfolds = 10)
+plot(fit_lasso_3)
+#fit_lasso_3$lambda.min=3.26
+
+fit_lasso_model_3 <- glmnet(x = x_lasso_no_gov,y=y_lasso,data=crime,alpha=1,lambda=3.26)
+sig_var_3 <- coef(fit_lasso_model_3)
+as.data.frame(sig_var_3[which(sig_var_3 !=0),])
+```
+
+```{r LASSO_without_gov_relaxed}
+fit_lm_3 <- lm(Violent.crime~AGE85PLUS_FEM+Ed3SomeCollegePct+
+                   Ed5CollegePlusPct+OwnHomePct+Tier_3+Tier_4+
+                   Black.or.African.American.alone..percent..2013+
+                   Native.Hawaiian.and.Other.Pacific.Islander.alone..percent.+
+                   Two.or.More.Races..percent..2013
+                   ,data=crime)
+summary(fit_lm_3)
+```
+
+```{r LASSO_without_gov_relaxed_back1}
+fit_lm_3_back1 <- lm(Violent.crime~Ed3SomeCollegePct+
+                   Ed5CollegePlusPct+OwnHomePct+Tier_3+Tier_4+
+                   Black.or.African.American.alone..percent..2013+
+                   Native.Hawaiian.and.Other.Pacific.Islander.alone..percent.+
+                   Two.or.More.Races..percent..2013
+                   ,data=crime)
+summary(fit_lm_3_back1)
+```
+
+```{r LASSO_without_gov_relaxed_back2}
+fit_lm_3_back2 <- lm(Violent.crime~Ed3SomeCollegePct+
+                   Ed5CollegePlusPct+OwnHomePct+Tier_4+
+                   Black.or.African.American.alone..percent..2013+
+                   Native.Hawaiian.and.Other.Pacific.Islander.alone..percent.+
+                   Two.or.More.Races..percent..2013
+                   ,data=crime)
+summary(fit_lm_3_back2)
+```
+
+```{r LASSO_without_gov_relaxed_back3}
+fit_lm_3_back3 <- lm(Violent.crime~Ed3SomeCollegePct+
+                   Ed5CollegePlusPct+OwnHomePct+Tier_4+
+                   Black.or.African.American.alone..percent..2013+
+                   Two.or.More.Races..percent..2013
+                   ,data=crime)
+summary(fit_lm_3_back3)
+```
+
+```{r LASSO_without_gov_relaxed_back4}
+fit_lm_3_back4 <- lm(Violent.crime~
+                   Ed5CollegePlusPct+OwnHomePct+Tier_4+
+                   Black.or.African.American.alone..percent..2013+
+                   Two.or.More.Races..percent..2013
+                   ,data=crime)
+summary(fit_lm_3_back4)
+```
+```{r Assumption Validation}
+plot(fit_lm_3_back4)
+```
+
+Once again, the three assumptions are also met in this model using the same data.
+
+
+# Testing Models
+```{r Estimating_Error_with_test_data}
+Error1 <- sum((test$Violent.crime-predict(fit_lm_back7,newdata=test))^2)
+Error2 <- sum((test$Violent.crime-predict(fit_lm_2_back5,newdata=test))^2)
+Error3 <- sum((test$Violent.crime-predict(fit_lm_3_back4,newdata=test))^2)
+Error1
+Error2
+Error3
+```
+The final model will be the LASSO without political affiliation with the least RSS. 
+
+# Result
+  From the final LASSO model, we identify the significant variables influencing violent crime rate includes the following: people with college plus degree, percentage of people owning house, proportion of high speed Internet access, Black or African Americans population and mixed race population. 
+
+  Factors that have positive coefficients, or appears to have positive correlation with violent crime rate holding other factors the same, includes percentage of people owning house, black/African American and mixed race population rate. 
+
+  Factors that have negative coefficients, meaning on average crime rate decreases as the variable increases holding other factors constant, include percentage of people with college plus degree and high speed Internet access. 
+
+```{r coefficients}
+coef(fit_lm_3_back4)
+```
+# Remarks
+Observing our final linear model, we recognize the significant variables and make the following remarks as to possible reasons why they contribute to violent crime rates.
+
+1) Access to higher education has a strong negative correlation with violent crime – this can be easily understood in that higher education lowers violence, where discrimination is lowered and accepting others. 
+
+2) Internet access also has a strong negative correlation with violent crime – we suspect this may be caused from more time spent online and leading to less motivation to commit violent crimes. The negative coefficient for this variable might also challenges the idea that video games contribute to violent crimes, though more investigations are required. 
+
+3) Home ownership is also strongly correlated with an increase in violent crime – one possible explanation for this might be that more housing allows for domestic violence or hate crimes.
+
+4) Race continues to have a significant correlation with violent crime – we suspect there may be greater socio-economic factors that lead to these issues such as unequal opportunities or historical impacts.

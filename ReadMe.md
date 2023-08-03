@@ -1,5 +1,10 @@
 This repository contains all the information used during Wharton Data Science 2023 summer program. Included is all the raw data, their respective sources and any other files used during the presentation. <br>
-
+<br>
+<a href = "https://www.kaggle.com/datasets/leoliu1415/number-of-violent-crimes-by-county">Kaggle Dataset</a>
+<br>
+<br>
+All files used in our final presentation can be found in the "Final Model Directory".
+<br>
 If you have questions, please contact at chenjacob@outlook.com
 
 
